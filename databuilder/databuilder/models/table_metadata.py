@@ -6,6 +6,9 @@ from typing import (
     Any, Dict, Iterable, Iterator, List, Optional, Set, Union,
 )
 
+from amundsen_common.utils.atlas import (
+    AtlasCommonParams, AtlasCommonTypes, AtlasTableTypes,
+)
 from amundsen_rds.models import RDSModel
 from amundsen_rds.models.cluster import Cluster as RDSCluster
 from amundsen_rds.models.column import (
@@ -19,6 +22,9 @@ from amundsen_rds.models.table import (
 )
 from amundsen_rds.models.tag import Tag as RDSTag
 
+from databuilder.models.atlas_entity import AtlasEntity
+from databuilder.models.atlas_relationship import AtlasRelationship
+from databuilder.models.atlas_serializable import AtlasSerializable
 from databuilder.models.badge import Badge, BadgeMetadata
 from databuilder.models.cluster import cluster_constants
 from databuilder.models.graph_node import GraphNode
@@ -26,6 +32,10 @@ from databuilder.models.graph_relationship import GraphRelationship
 from databuilder.models.graph_serializable import GraphSerializable
 from databuilder.models.schema import schema_constant
 from databuilder.models.table_serializable import TableSerializable
+from databuilder.serializers.atlas_serializer import (
+    add_entity_relationship, get_entity_attrs, get_entity_relationships,
+)
+from databuilder.utils.atlas import AtlasSerializedEntityOperation
 
 DESCRIPTION_NODE_LABEL_VAL = 'Description'
 DESCRIPTION_NODE_LABEL = DESCRIPTION_NODE_LABEL_VAL
@@ -120,7 +130,7 @@ class TagMetadata(GraphSerializable, TableSerializable):
 
 
 # TODO: this should inherit from ProgrammaticDescription in amundsen-common
-class DescriptionMetadata(GraphSerializable):
+class DescriptionMetadata(GraphSerializable, AtlasSerializable):
     DESCRIPTION_NODE_LABEL = DESCRIPTION_NODE_LABEL_VAL
     PROGRAMMATIC_DESCRIPTION_NODE_LABEL = 'Programmatic_Description'
     DESCRIPTION_KEY_FORMAT = '{description}'
@@ -243,6 +253,12 @@ class DescriptionMetadata(GraphSerializable):
             end_key=self.description_key
         )
 
+    def create_next_atlas_relation(self) -> Union[AtlasRelationship, None]:
+        pass
+
+    def create_next_atlas_entity(self) -> Union[AtlasEntity, None]:
+        pass
+
     def __repr__(self) -> str:
         return f'DescriptionMetadata({self.source!r}, {self.text!r})'
 
@@ -284,7 +300,7 @@ class ColumnMetadata:
                f'{self.sort_order!r}, {self.badges!r})'
 
 
-class TableMetadata(GraphSerializable, TableSerializable):
+class TableMetadata(GraphSerializable, TableSerializable, AtlasSerializable):
     """
     Table metadata that contains columns. It implements Neo4jCsvSerializable so that it can be serialized to produce
     Table, Column and relation of those along with relationship with table and schema. Additionally, it will create
@@ -369,6 +385,7 @@ class TableMetadata(GraphSerializable, TableSerializable):
         self._node_iterator = self._create_next_node()
         self._relation_iterator = self._create_next_relation()
         self._record_iterator = self._create_record_iterator()
+        self._atlas_entity_iterator = self._create_next_atlas_entity()
 
     def __repr__(self) -> str:
         return f'TableMetadata({self.database!r}, {self.cluster!r}, {self.schema!r}, {self.name!r} ' \
@@ -702,3 +719,159 @@ class TableMetadata(GraphSerializable, TableSerializable):
                         badge_rk=badge_record.rk
                     )
                     yield column_badge_record
+
+    def _create_atlas_cluster_entity(self) -> AtlasEntity:
+        attrs_mapping = [
+            (AtlasCommonParams.qualified_name, self._get_cluster_key()),
+            ('name', self.cluster),
+            ('displayName', self.cluster)
+        ]
+
+        entity_attrs = get_entity_attrs(attrs_mapping)
+
+        entity = AtlasEntity(
+            typeName=AtlasCommonTypes.cluster,
+            operation=AtlasSerializedEntityOperation.CREATE,
+            attributes=entity_attrs,
+            relationships=None
+        )
+
+        return entity
+
+    def _create_atlas_database_entity(self) -> AtlasEntity:
+        attrs_mapping = [
+            (AtlasCommonParams.qualified_name, self._get_database_key()),
+            ('name', self.database),
+            ('displayName', self.database)
+        ]
+
+        entity_attrs = get_entity_attrs(attrs_mapping)
+
+        relationship_list = []  # type: ignore
+
+        add_entity_relationship(
+            relationship_list,
+            'cluster',
+            AtlasCommonTypes.cluster,
+            self._get_cluster_key()
+        )
+
+        entity = AtlasEntity(
+            typeName=AtlasTableTypes.database,
+            operation=AtlasSerializedEntityOperation.CREATE,
+            attributes=entity_attrs,
+            relationships=get_entity_relationships(relationship_list)
+        )
+
+        return entity
+
+    def _create_atlas_schema_entity(self) -> AtlasEntity:
+        attrs_mapping = [
+            (AtlasCommonParams.qualified_name, self._get_schema_key()),
+            ('name', self.schema),
+            ('displayName', self.schema)
+        ]
+
+        entity_attrs = get_entity_attrs(attrs_mapping)
+
+        relationship_list = []  # type: ignore
+
+        add_entity_relationship(
+            relationship_list,
+            'cluster',
+            AtlasCommonTypes.cluster,
+            self._get_cluster_key()
+        )
+
+        entity = AtlasEntity(
+            typeName=AtlasTableTypes.schema,
+            operation=AtlasSerializedEntityOperation.CREATE,
+            attributes=entity_attrs,
+            relationships=get_entity_relationships(relationship_list)
+        )
+
+        return entity
+
+    def _create_atlas_table_entity(self) -> AtlasEntity:
+        table_type = 'table' if not self.is_view else 'view'
+
+        attrs_mapping = [
+            (AtlasCommonParams.qualified_name, self._get_table_key()),
+            ('name', self.name),
+            ('tableType', table_type),
+            ('description', self.description.text if self.description else ''),
+            ('displayName', self.name)
+        ]
+
+        entity_attrs = get_entity_attrs(attrs_mapping)
+
+        relationship_list = []  # type: ignore
+
+        add_entity_relationship(
+            relationship_list,
+            'amundsen_schema',
+            AtlasTableTypes.schema,
+            self._get_schema_key()
+        )
+
+        entity = AtlasEntity(
+            typeName=AtlasTableTypes.table,
+            operation=AtlasSerializedEntityOperation.CREATE,
+            attributes=entity_attrs,
+            relationships=get_entity_relationships(relationship_list)
+        )
+
+        return entity
+
+    def _create_atlas_column_entity(self, column_metadata: ColumnMetadata) -> AtlasEntity:
+        qualified_name = column_metadata.COLUMN_KEY_FORMAT.format(db=self.database,
+                                                                  cluster=self.cluster,
+                                                                  schema=self.schema,
+                                                                  tbl=self.name,
+                                                                  col=column_metadata.name)
+        attrs_mapping = [
+            (AtlasCommonParams.qualified_name, qualified_name),
+            ('name', column_metadata.name or ''),
+            ('description', column_metadata.description.text if column_metadata.description else ''),
+            ('type', column_metadata.type),
+            ('position', column_metadata.sort_order),
+            ('displayName', column_metadata.name or '')
+        ]
+
+        entity_attrs = get_entity_attrs(attrs_mapping)
+
+        relationship_list = []  # type: ignore
+
+        add_entity_relationship(
+            relationship_list,
+            'table',
+            AtlasTableTypes.table,
+            self._get_table_key()
+        )
+
+        entity = AtlasEntity(
+            typeName=AtlasTableTypes.column,
+            operation=AtlasSerializedEntityOperation.CREATE,
+            attributes=entity_attrs,
+            relationships=get_entity_relationships(relationship_list)
+        )
+
+        return entity
+
+    def create_next_atlas_relation(self) -> Union[AtlasRelationship, None]:
+        pass
+
+    def _create_next_atlas_entity(self) -> Iterator[AtlasEntity]:
+        yield self._create_atlas_cluster_entity()
+        yield self._create_atlas_database_entity()
+        yield self._create_atlas_schema_entity()
+        yield self._create_atlas_table_entity()
+
+        for col in self.columns:
+            yield self._create_atlas_column_entity(col)
+
+    def create_next_atlas_entity(self) -> Union[AtlasEntity, None]:
+        try:
+            return next(self._atlas_entity_iterator)
+        except StopIteration:
+            return None

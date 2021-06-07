@@ -126,11 +126,12 @@ class DashboardTable(GraphSerializable, TableSerializable, AtlasSerializable):
 
     def _create_atlas_relation_iterator(self) -> Iterator[AtlasRelationship]:
         for table_id in self._table_ids:
-            table_key = AtlasTableKey(table_id)
+            key = AtlasTableKey(table_id)
+
             table_relationship = AtlasRelationship(
                 relationshipType=AtlasRelationshipTypes.table_dashboard,
-                entityType1=table_key.get_details()['database'],
-                entityQualifiedName1=table_key.qualified_name,
+                entityType1=key.entity_type,
+                entityQualifiedName1=key.qualified_name,
                 entityType2=AtlasDashboardTypes.metadata,
                 entityQualifiedName2=DashboardMetadata.DASHBOARD_KEY_FORMAT.format(
                     product=self._product,
