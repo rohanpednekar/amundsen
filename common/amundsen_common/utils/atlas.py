@@ -29,6 +29,7 @@ class AtlasCommonTypes:
     cluster = 'Cluster'
     application = 'Application'
     tag = 'Tag'
+    badge = 'Badge'
 
 
 class AtlasTableTypes:

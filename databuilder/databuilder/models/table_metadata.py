@@ -150,10 +150,10 @@ class TagMetadata(GraphSerializable, TableSerializable, AtlasSerializable):
 
     def create_atlas_tag_relation(self, table_key: str) -> AtlasRelationship:
         table_relationship = AtlasRelationship(
-            relationshipType=AtlasRelationshipTypes.glossary,
+            relationshipType=AtlasRelationshipTypes.tag,
             entityType1=AtlasTableTypes.table,
             entityQualifiedName1=table_key,
-            entityType2=AtlasRelationshipTypes.glossary,
+            entityType2=AtlasRelationshipTypes.tag,
             entityQualifiedName2=f'glossary={self._tag_type},term={self._name}',
             attributes={}
         )
@@ -162,7 +162,6 @@ class TagMetadata(GraphSerializable, TableSerializable, AtlasSerializable):
 
     def _create_atlas_relation_iterator(self) -> Iterator[AtlasRelationship]:
         yield
-        pass
 
     def create_next_atlas_relation(self) -> Union[AtlasRelationship, None]:
         try:
@@ -937,7 +936,8 @@ class TableMetadata(GraphSerializable, TableSerializable, AtlasSerializable):
         if self.tags:
             for tag in self.tags:
                 tag_entity = TagMetadata(tag).create_next_atlas_entity()
-                yield tag_entity
+                if tag_entity:
+                    yield tag_entity
 
     def create_next_atlas_entity(self) -> Union[AtlasEntity, None]:
         try:

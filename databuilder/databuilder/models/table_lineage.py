@@ -99,7 +99,7 @@ class BaseLineage(GraphSerializable, AtlasSerializable):
 
         yield upstream
 
-        for downstream_key in self.downstream_deps:
+        for downstream_key in self.downstream_deps:  # type: ignore
             downstream = AtlasRelationship(
                 relationshipType=AtlasRelationshipTypes.lineage_downstream,
                 entityType1=AtlasTableTypes.process,

@@ -8,6 +8,7 @@ from typing import (
 )
 
 import pandas
+from amundsen_common.utils.atlas import AtlasCommonParams, AtlasCommonTypes
 from apache_atlas.exceptions import AtlasServiceException
 from apache_atlas.model.glossary import (
     AtlasGlossary, AtlasGlossaryHeader, AtlasGlossaryTerm,
@@ -16,9 +17,9 @@ from apache_atlas.model.instance import (
     AtlasEntitiesWithExtInfo, AtlasEntity, AtlasObjectId, AtlasRelatedObjectId,
 )
 from apache_atlas.model.relationship import AtlasRelationship
+from apache_atlas.model.typedef import AtlasClassificationDef, AtlasTypesDef
 from pyhocon import ConfigTree
 
-from amundsen_common.utils.atlas import AtlasCommonParams, AtlasCommonTypes
 from databuilder.publisher.base_publisher import Publisher
 from databuilder.utils.atlas import (
     AtlasRelationshipTypes, AtlasSerializedEntityFields, AtlasSerializedEntityOperation,
@@ -67,11 +68,12 @@ class AtlasCSVPublisher(Publisher):
         """
         LOGGER.info('Creating entities using Entity files: %s', self._entity_files)
         for entity_file in self._entity_files:
-            entities_to_create, entities_to_update, glossary_terms_to_create = self._create_entity_instances(
-                entity_file=entity_file)
+            entities_to_create, entities_to_update, \
+            glossary_terms_create, classifications_create = self._create_entity_instances(entity_file=entity_file)
             self._sync_entities_to_atlas(entities_to_create)
             self._update_entities(entities_to_update)
-            self._create_glossary_terms(glossary_terms_to_create)
+            self._create_glossary_terms(glossary_terms_create)
+            self._create_classifications(classifications_create)
 
         LOGGER.info('Creating relations using relation files: %s', self._relationship_files)
         for relation_file in self._relationship_files:
@@ -103,8 +105,11 @@ class AtlasCSVPublisher(Publisher):
 
         with open(relation_file, encoding='utf8') as relation_csv:
             for relation_record in pandas.read_csv(relation_csv, na_filter=False).to_dict(orient='records'):
-                if relation_record[AtlasSerializedRelationshipFields.relation_type] == AtlasRelationshipTypes.glossary:
+                if relation_record[AtlasSerializedRelationshipFields.relation_type] == AtlasRelationshipTypes.tag:
                     self._assign_glossary_term(relation_record)
+                    continue
+                elif relation_record[AtlasSerializedRelationshipFields.relation_type] == AtlasRelationshipTypes.badge:
+                    self._assign_classification(relation_record)
                     continue
 
                 relation = self._create_relation(relation_record)
@@ -156,7 +161,8 @@ class AtlasCSVPublisher(Publisher):
 
         return relation
 
-    def _create_entity_instances(self, entity_file: str) -> Tuple[List[AtlasEntity], List[AtlasEntity], List[Dict]]:
+    def _create_entity_instances(self, entity_file: str) -> Tuple[List[AtlasEntity], List[AtlasEntity],
+                                                                  List[Dict], List[Dict]]:
         """
         Go over the entities file and try creating instances
         :param entity_file:
@@ -165,16 +171,22 @@ class AtlasCSVPublisher(Publisher):
         entities_to_create = []
         entities_to_update = []
         glossary_terms_to_create = []
+        classifications_to_create = []
         with open(entity_file, encoding='utf8') as entity_csv:
             for entity_record in pandas.read_csv(entity_csv, na_filter=False).to_dict(orient='records'):
                 if entity_record[AtlasSerializedEntityFields.type_name] == AtlasCommonTypes.tag:
                     glossary_terms_to_create.append(entity_record)
                     continue
+
+                if entity_record[AtlasSerializedEntityFields.type_name] == AtlasCommonTypes.badge:
+                    classifications_to_create.append(entity_record)
+                    continue
+
                 if entity_record[AtlasSerializedEntityFields.operation] == AtlasSerializedEntityOperation.CREATE:
                     entities_to_create.append(self._create_entity_from_dict(entity_record))
                 if entity_record[AtlasSerializedEntityFields.operation] == AtlasSerializedEntityOperation.UPDATE:
                     entities_to_update.append(self._create_entity_from_dict(entity_record))
-        return entities_to_create, entities_to_update, glossary_terms_to_create
+        return entities_to_create, entities_to_update, glossary_terms_to_create, classifications_to_create
 
     def _extract_entity_relations_details(self, relation_details: str) -> Iterator[Tuple]:
         """
@@ -280,6 +292,57 @@ class AtlasCSVPublisher(Publisher):
             self._atlas_client.glossary.assign_term_to_entities(term[AtlasCommonParams.guid], [e])
         except:
             LOGGER.error('Error assigning terms to entities.', exc_info=True)
+
+    def _render_super_type_from_dict(self, classification_spec: Dict) -> AtlasClassificationDef:
+        return self._render_classification(classification_spec, True)
+
+    def _render_sub_type_from_dict(self, classification_spec: Dict) -> AtlasClassificationDef:
+        return self._render_classification(classification_spec, False)
+
+    def _render_classification(self, classification_spec: Dict, super_type: bool) -> AtlasClassificationDef:
+        name = classification_spec.get('category') if super_type else classification_spec.get('name')
+        sub_types = [classification_spec.get('category')] if not super_type else []
+
+        result = AtlasClassificationDef(attrs=dict(name=name,
+                                                   attributeDefs=[],
+                                                   subTypes=sub_types,
+                                                   superTypes=[],
+                                                   entityTypes=[]))
+
+        return result
+
+    def _create_classifications(self, classifications: List[Dict]) -> None:
+        _st = set()
+        super_types = [self._render_super_type_from_dict(s) for s in classifications if s['category'] not in _st and
+                       _st.add(s['category'])]  # type: ignore
+        super_types_chunks = self._chunks(super_types)
+
+        sub_types = [self._render_sub_type_from_dict(s) for s in classifications]
+        sub_types_chunks = self._chunks(sub_types)
+
+        for chunks in [super_types_chunks, sub_types_chunks]:
+            for chunk in chunks:
+                LOGGER.info(f'Syncing chunk of {len(chunk)} classifications with atlas')
+                try:
+                    types = AtlasTypesDef(attrs=dict(classificationDefs=chunk))
+
+                    self._atlas_client.typedef.create_atlas_typedefs(types)
+                except AtlasServiceException:
+                    LOGGER.error(f'Error during classification syncing', exc_info=True)
+
+    def _assign_classification(self, relationship_spec: Dict) -> None:
+        classification_qn = relationship_spec[AtlasSerializedRelationshipFields.qualified_name_2]
+
+        entity_type = relationship_spec[AtlasSerializedRelationshipFields.entity_type_1]
+        entity_qn = relationship_spec[AtlasSerializedRelationshipFields.qualified_name_1]
+
+        try:
+            self._atlas_client.entity.add_classifications_by_type(entity_type,
+                                                                  uniq_attributes=[(AtlasCommonParams.qualified_name,
+                                                                                    entity_qn)],
+                                                                  classifications=[classification_qn])
+        except Exception:
+            LOGGER.error(f'Error during classification assingment.', exc_info=True)
 
     def get_scope(self) -> str:
         return 'publisher.atlas_csv_publisher'

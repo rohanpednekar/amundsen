@@ -32,7 +32,7 @@ from sqlalchemy.ext.declarative import declarative_base
 
 from databuilder.extractor.atlas_search_data_extractor import AtlasSearchDataExtractor
 from databuilder.extractor.csv_extractor import (
-    CsvColumnLineageExtractor, CsvExtractor, CsvTableColumnExtractor, CsvTableLineageExtractor,
+    CsvColumnLineageExtractor, CsvExtractor, CsvTableBadgeExtractor, CsvTableColumnExtractor, CsvTableLineageExtractor,
 )
 from databuilder.job.job import DefaultJob
 from databuilder.loader.file_system_atlas_csv_loader import FsAtlasCSVLoader
@@ -104,33 +104,31 @@ def run_csv_job(file_loc, job_name, model):
                publisher=AtlasCSVPublisher()).launch()
 
 
-# def run_table_badge_job(table_path, badge_path):
-#     tmp_folder = '/var/tmp/amundsen/table_badge'
-#     node_files_folder = f'{tmp_folder}/nodes'
-#     relationship_files_folder = f'{tmp_folder}/relationships'
-#     extractor = CsvTableBadgeExtractor()
-#     csv_loader = FsNeo4jCSVLoader()
-#     task = DefaultTask(extractor=extractor,
-#                        loader=csv_loader,
-#                        transformer=NoopTransformer())
-#     job_config = ConfigFactory.from_dict({
-#         'extractor.csvtablebadge.table_file_location': table_path,
-#         'extractor.csvtablebadge.badge_file_location': badge_path,
-#         'loader.filesystem_csv_neo4j.node_dir_path': node_files_folder,
-#         'loader.filesystem_csv_neo4j.relationship_dir_path': relationship_files_folder,
-#         'loader.filesystem_csv_neo4j.delete_created_directories': True,
-#         'publisher.neo4j.node_files_directory': node_files_folder,
-#         'publisher.neo4j.relation_files_directory': relationship_files_folder,
-#         'publisher.neo4j.neo4j_endpoint': neo4j_endpoint,
-#         'publisher.neo4j.neo4j_user': neo4j_user,
-#         'publisher.neo4j.neo4j_password': neo4j_password,
-#         'publisher.neo4j.neo4j_encrypted': False,
-#         'publisher.neo4j.job_publish_tag': 'unique_tag_b',  # should use unique tag here like {ds}
-#     })
-#     job = DefaultJob(conf=job_config,
-#                      task=task,
-#                      publisher=Neo4jCsvPublisher())
-#     job.launch()
+def run_table_badge_job(table_path, badge_path):
+    tmp_folder = '/var/tmp/amundsen/table_badge'
+    node_files_folder = f'{tmp_folder}/nodes'
+    relationship_files_folder = f'{tmp_folder}/relationships'
+    extractor = CsvTableBadgeExtractor()
+    csv_loader = FsAtlasCSVLoader()
+    task = DefaultTask(extractor=extractor,
+                       loader=csv_loader,
+                       transformer=NoopTransformer())
+    job_config = ConfigFactory.from_dict({
+        'extractor.csvtablebadge.table_file_location': table_path,
+        'extractor.csvtablebadge.badge_file_location': badge_path,
+        f'loader.filesystem_csv_atlas.{FsAtlasCSVLoader.ENTITY_DIR_PATH}': node_files_folder,
+        f'loader.filesystem_csv_atlas.{FsAtlasCSVLoader.RELATIONSHIP_DIR_PATH}': relationship_files_folder,
+        f'loader.filesystem_csv_atlas.{FsAtlasCSVLoader.SHOULD_DELETE_CREATED_DIR}': True,
+        f'publisher.atlas_csv_publisher.{AtlasCSVPublisher.ATLAS_CLIENT}': AtlasClient(atlas_endpoint,
+                                                                                       (atlas_user, atlas_password)),
+        f'publisher.atlas_csv_publisher.{AtlasCSVPublisher.ENTITY_DIR_PATH}': node_files_folder,
+        f'publisher.atlas_csv_publisher.{AtlasCSVPublisher.RELATIONSHIP_DIR_PATH}': relationship_files_folder,
+        f'publisher.atlas_csv_publisher.{AtlasCSVPublisher.ATLAS_ENTITY_CREATE_BATCH_SIZE}': 3,
+    })
+    job = DefaultJob(conf=job_config,
+                     task=task,
+                     publisher=AtlasCSVPublisher())
+    job.launch()
 
 
 def run_table_column_job(table_path, column_path):
@@ -362,7 +360,8 @@ if __name__ == "__main__":
     # logging.basicConfig(level=logging.INFO)
 
     run_table_column_job('example/sample_data/sample_table.csv', 'example/sample_data/sample_col.csv')
-    # run_table_badge_job('example/sample_data/sample_table.csv', 'example/sample_data/sample_badges.csv')
+    run_table_badge_job('example/sample_data/sample_table.csv', 'example/sample_data/sample_badges.csv')
+    sys.exit(1)
     run_table_lineage_job('example/sample_data/sample_table_lineage.csv')
     run_column_lineage_job('example/sample_data/sample_column_lineage.csv')
     # run_csv_job('example/sample_data/sample_table_column_stats.csv', 'test_table_column_stats',
@@ -399,8 +398,6 @@ if __name__ == "__main__":
                 'databuilder.models.dashboard.dashboard_last_modified.DashboardLastModifiedTimestamp')
 
     create_dashboard_tables_job().launch()
-
-    # create_last_updated_job().launch()
 
     job_es_table = create_es_publisher_sample_job(
         elasticsearch_index_alias='table_search_index',
