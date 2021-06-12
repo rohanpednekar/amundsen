@@ -372,20 +372,17 @@ if __name__ == "__main__":
 
     job_es_table = create_es_publisher_sample_job(
         elasticsearch_index_alias='table_search_index',
-        elasticsearch_doc_type_key='table',
         entity_type='table')
     job_es_table.launch()
 
     job_es_user = create_es_publisher_sample_job(
         elasticsearch_index_alias='user_search_index',
-        elasticsearch_doc_type_key='user',
         entity_type='user',
         elasticsearch_mapping=USER_ELASTICSEARCH_INDEX_MAPPING)
     job_es_user.launch()
 
     job_es_dashboard = create_es_publisher_sample_job(
         elasticsearch_index_alias='dashboard_search_index',
-        elasticsearch_doc_type_key='dashboard',
         entity_type='dashboard',
         elasticsearch_mapping=DASHBOARD_ELASTICSEARCH_INDEX_MAPPING)
     job_es_dashboard.launch()
