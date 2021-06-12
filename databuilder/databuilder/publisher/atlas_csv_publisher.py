@@ -69,7 +69,7 @@ class AtlasCSVPublisher(Publisher):
         LOGGER.info('Creating entities using Entity files: %s', self._entity_files)
         for entity_file in self._entity_files:
             entities_to_create, entities_to_update, \
-            glossary_terms_create, classifications_create = self._create_entity_instances(entity_file=entity_file)
+                glossary_terms_create, classifications_create = self._create_entity_instances(entity_file=entity_file)
             self._sync_entities_to_atlas(entities_to_create)
             self._update_entities(entities_to_update)
             self._create_glossary_terms(glossary_terms_create)
@@ -290,7 +290,7 @@ class AtlasCSVPublisher(Publisher):
 
         try:
             self._atlas_client.glossary.assign_term_to_entities(term[AtlasCommonParams.guid], [e])
-        except:
+        except Exception:
             LOGGER.error('Error assigning terms to entities.', exc_info=True)
 
     def _render_super_type_from_dict(self, classification_spec: Dict) -> AtlasClassificationDef:

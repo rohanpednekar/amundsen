@@ -85,7 +85,7 @@ class AtlasSearchDataExtractorHelpers:
     def get_table_database(qualified_name: str) -> str:
         try:
             result = AtlasTableKey(qualified_name).get_details()['database']
-        except:
+        except Exception:
             result = 'hive_table'
 
         return result

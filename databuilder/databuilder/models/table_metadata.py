@@ -161,7 +161,7 @@ class TagMetadata(GraphSerializable, TableSerializable, AtlasSerializable):
         return table_relationship
 
     def _create_atlas_relation_iterator(self) -> Iterator[AtlasRelationship]:
-        yield
+        pass
 
     def create_next_atlas_relation(self) -> Union[AtlasRelationship, None]:
         try:

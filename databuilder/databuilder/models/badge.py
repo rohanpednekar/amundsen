@@ -6,7 +6,7 @@ from typing import (
 )
 
 from amundsen_common.utils.atlas import (
-    AtlasCommonParams, AtlasCommonTypes, AtlasTableKey, AtlasTableTypes,
+    AtlasCommonParams, AtlasCommonTypes, AtlasTableKey,
 )
 from amundsen_rds.models import RDSModel
 from amundsen_rds.models.badge import Badge as RDSBadge
@@ -33,8 +33,7 @@ class Badge:
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, Badge):
             return NotImplemented
-        return self.name == other.name and \
-            self.category == other.category
+        return self.name == other.name and self.category == other.category
 
 
 class BadgeMetadata(GraphSerializable, TableSerializable, AtlasSerializable):

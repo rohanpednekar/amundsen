@@ -119,6 +119,7 @@ class BaseLineage(GraphSerializable, AtlasSerializable):
     def _get_atlas_entity_type(self) -> str:
         pass
 
+
 class TableLineage(BaseLineage):
     """
     Table Lineage Model. It won't create nodes but create upstream/downstream rels.
@@ -165,6 +166,7 @@ class ColumnLineage(BaseLineage):
     """
     Column Lineage Model. It won't create nodes but create upstream/downstream rels.
     """
+
     def __init__(self,
                  column_key: str,
                  downstream_deps: List = None,  # List of column keys

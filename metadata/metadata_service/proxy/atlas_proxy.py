@@ -1110,8 +1110,6 @@ class AtlasProxy(BaseProxy):
 
         applications = self.client.entity.get_entities_by_guids(guids=list(guids), ignore_relationships=False)
 
-        _result = []
-
         for _app in applications.entities or list():
             url = _app.attributes.get('application_url', '')
             description = _app.attributes.get('description', '')
@@ -1120,7 +1118,10 @@ class AtlasProxy(BaseProxy):
 
             app = Application(application_url=url, description=description, id=id, name=name)
 
-            return app
+            # only single app per table is supported
+            break
+
+        return app
 
     def _get_programmatic_descriptions(self, parameters: dict) -> List[ProgrammaticDescription]:
         programmatic_descriptions: Dict[str, ProgrammaticDescription] = {}

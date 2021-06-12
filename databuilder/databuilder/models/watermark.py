@@ -62,7 +62,6 @@ class Watermark(GraphSerializable, TableSerializable, AtlasSerializable):
         self._record_iter = self._create_next_record()
         self._atlas_entity_iterator = self._create_next_atlas_entity()
 
-
     def create_next_node(self) -> Union[GraphNode, None]:
         # return the string representation of the data
         try:
