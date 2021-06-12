@@ -5,9 +5,7 @@ from typing import (
     Iterator, List, Optional, Union,
 )
 
-from amundsen_common.utils.atlas import (
-    AtlasCommonParams, AtlasCommonTypes, AtlasTableKey,
-)
+from amundsen_common.utils.atlas import AtlasCommonParams, AtlasCommonTypes
 from amundsen_rds.models import RDSModel
 from amundsen_rds.models.badge import Badge as RDSBadge
 

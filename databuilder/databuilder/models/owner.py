@@ -5,9 +5,7 @@ from typing import (
     Iterator, List, Optional, Union,
 )
 
-from amundsen_common.utils.atlas import (
-    AtlasCommonParams, AtlasCommonTypes, AtlasTableTypes,
-)
+from amundsen_common.utils.atlas import AtlasCommonParams, AtlasCommonTypes
 from amundsen_rds.models import RDSModel
 from amundsen_rds.models.dashboard import DashboardOwner as RDSDashboardOwner
 from amundsen_rds.models.table import TableOwner as RDSTableOwner

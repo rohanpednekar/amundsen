@@ -3,10 +3,10 @@
 
 from typing import Iterator, Union
 
+from amundsen_common.utils.atlas import AtlasTableTypes
 from amundsen_rds.models import RDSModel
 from amundsen_rds.models.table import TableUsage as RDSTableUsage
 
-from amundsen_common.utils.atlas import AtlasTableTypes
 from databuilder.models.atlas_usage import AtlasUsage
 from databuilder.models.graph_node import GraphNode
 from databuilder.models.graph_relationship import GraphRelationship

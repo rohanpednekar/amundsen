@@ -2,6 +2,7 @@ import abc
 from typing import Iterator, Union
 
 from amundsen_common.utils.atlas import AtlasCommonParams, AtlasCommonTypes
+
 from databuilder.models.atlas_entity import AtlasEntity
 from databuilder.models.atlas_relationship import AtlasRelationship
 from databuilder.models.atlas_serializable import AtlasSerializable

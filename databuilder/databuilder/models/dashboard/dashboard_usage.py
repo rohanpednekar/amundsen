@@ -6,10 +6,10 @@ from typing import (
     Any, Iterator, Optional, Union,
 )
 
+from amundsen_common.utils.atlas import AtlasDashboardTypes
 from amundsen_rds.models import RDSModel
 from amundsen_rds.models.dashboard import DashboardUsage as RDSDashboardUsage
 
-from amundsen_common.utils.atlas import AtlasDashboardTypes
 from databuilder.models.atlas_usage import AtlasUsage
 from databuilder.models.dashboard.dashboard_metadata import DashboardMetadata
 from databuilder.models.graph_node import GraphNode
