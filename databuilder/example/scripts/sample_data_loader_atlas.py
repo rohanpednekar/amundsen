@@ -343,8 +343,8 @@ if __name__ == "__main__":
                 'databuilder.models.watermark.Watermark')
     run_csv_job('example/sample_data/sample_table_owner.csv', 'test_table_owner_metadata',
                 'databuilder.models.table_owner.TableOwner')
-    # run_csv_job('example/sample_data/sample_column_usage.csv', 'test_usage_metadata',
-    #             'databuilder.models.column_usage_model.ColumnUsageModel')
+    run_csv_job('example/sample_data/sample_column_usage.csv', 'test_usage_metadata',
+                'databuilder.models.column_usage_model.ColumnUsageModel')
     run_csv_job('example/sample_data/sample_user.csv', 'test_user_metadata',
                 'databuilder.models.user.User')
     run_csv_job('example/sample_data/sample_application.csv', 'test_application_metadata',
@@ -357,8 +357,8 @@ if __name__ == "__main__":
     #             'databuilder.models.schema.schema.SchemaModel')
     run_csv_job('example/sample_data/sample_dashboard_base.csv', 'test_dashboard_base',
                 'databuilder.models.dashboard.dashboard_metadata.DashboardMetadata')
-    # run_csv_job('example/sample_data/sample_dashboard_usage.csv', 'test_dashboard_usage',
-    #             'databuilder.models.dashboard.dashboard_usage.DashboardUsage')
+    run_csv_job('example/sample_data/sample_dashboard_usage.csv', 'test_dashboard_usage',
+                'databuilder.models.dashboard.dashboard_usage.DashboardUsage')
     run_csv_job('example/sample_data/sample_dashboard_owner.csv', 'test_dashboard_owner',
                 'databuilder.models.dashboard.dashboard_owner.DashboardOwner')
     run_csv_job('example/sample_data/sample_dashboard_query.csv', 'test_dashboard_query',

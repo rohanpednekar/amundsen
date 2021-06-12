@@ -137,7 +137,7 @@ class Owner(GraphSerializable, TableSerializable, AtlasSerializable):
     def _create_atlas_owner_relation(self, owner: str) -> AtlasRelationship:
         table_relationship = AtlasRelationship(
             relationshipType=AtlasRelationshipTypes.resource_owner,
-            entityType1=AtlasTableTypes.table,
+            entityType1=AtlasCommonTypes.data_set,
             entityQualifiedName1=self.start_key,
             entityType2=AtlasCommonTypes.user,
             entityQualifiedName2=User.get_user_model_key(email=owner),

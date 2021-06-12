@@ -9,6 +9,8 @@ from typing import (
 from amundsen_rds.models import RDSModel
 from amundsen_rds.models.dashboard import DashboardUsage as RDSDashboardUsage
 
+from amundsen_common.utils.atlas import AtlasDashboardTypes
+from databuilder.models.atlas_usage import AtlasUsage
 from databuilder.models.dashboard.dashboard_metadata import DashboardMetadata
 from databuilder.models.graph_node import GraphNode
 from databuilder.models.graph_relationship import GraphRelationship
@@ -22,7 +24,7 @@ from databuilder.models.user import User
 LOGGER = logging.getLogger(__name__)
 
 
-class DashboardUsage(GraphSerializable, TableSerializable):
+class DashboardUsage(GraphSerializable, TableSerializable, AtlasUsage):
     """
     A model that encapsulate Dashboard usage between Dashboard and User
     """
@@ -61,6 +63,8 @@ class DashboardUsage(GraphSerializable, TableSerializable):
         self._should_create_user_node = bool(should_create_user_node)
         self._relation_iterator = self._create_relation_iterator()
         self._record_iterator = self._create_record_iterator()
+        self._atlas_entity_iterator = self._create_next_atlas_entity()
+        self._atlas_relation_iterator = self._create_atlas_relation_iterator()
 
     def create_next_node(self) -> Union[GraphNode, None]:
         if self._should_create_user_node:
@@ -116,6 +120,23 @@ class DashboardUsage(GraphSerializable, TableSerializable):
             read_count=self._view_count
         )
         yield dashboard_usage_record
+
+    def _get_user_key(self, *args, **kwargs):
+        return self._email
+
+    def _get_entity_key(self):
+        return DashboardMetadata.DASHBOARD_KEY_FORMAT.format(
+            product=self._product,
+            cluster=self._cluster,
+            dashboard_group=self._dashboard_group_id,
+            dashboard_name=self._dashboard_id
+        )
+
+    def _get_usage(self):
+        return self._view_count
+
+    def _get_entity_type(self):
+        return AtlasDashboardTypes.metadata
 
     def __repr__(self) -> str:
         return f'DashboardUsage({self._dashboard_group_id!r}, {self._dashboard_id!r}, ' \

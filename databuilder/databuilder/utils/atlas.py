@@ -12,6 +12,8 @@ class AtlasRelationshipTypes:
     lineage_downstream = 'process_dataset_outputs'
     tag = 'AtlasGlossaryTerm'
     badge = 'AtlasClassification'
+    referenceable_reader = 'Referenceable_Readers'
+    reader_user = 'Reader_Users'
 
 
 class AtlasSerializedRelationshipFields:

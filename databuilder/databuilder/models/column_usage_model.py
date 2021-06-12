@@ -6,6 +6,8 @@ from typing import Iterator, Union
 from amundsen_rds.models import RDSModel
 from amundsen_rds.models.table import TableUsage as RDSTableUsage
 
+from amundsen_common.utils.atlas import AtlasTableTypes
+from databuilder.models.atlas_usage import AtlasUsage
 from databuilder.models.graph_node import GraphNode
 from databuilder.models.graph_relationship import GraphRelationship
 from databuilder.models.graph_serializable import GraphSerializable
@@ -17,7 +19,7 @@ from databuilder.models.usage.usage_constants import (
 from databuilder.models.user import User
 
 
-class ColumnUsageModel(GraphSerializable, TableSerializable):
+class ColumnUsageModel(GraphSerializable, TableSerializable, AtlasUsage):
     """
     A model represents user <--> column graph model
     Currently it only support to serialize to table level
@@ -51,6 +53,8 @@ class ColumnUsageModel(GraphSerializable, TableSerializable):
         self._node_iter = self._create_node_iterator()
         self._relation_iter = self._create_relation_iterator()
         self._record_iter = self._create_record_iterator()
+        self._atlas_entity_iterator = self._create_next_atlas_entity()
+        self._atlas_relation_iterator = self._create_atlas_relation_iterator()
 
     def create_next_node(self) -> Union[GraphNode, None]:
 
@@ -77,7 +81,7 @@ class ColumnUsageModel(GraphSerializable, TableSerializable):
         relationship = GraphRelationship(
             start_key=self._get_table_key(),
             start_label=TableMetadata.TABLE_NODE_LABEL,
-            end_key=self._get_user_key(self.user_email),
+            end_key=self._get_user_key(),
             end_label=User.USER_NODE_LABEL,
             type=ColumnUsageModel.TABLE_USER_RELATION_TYPE,
             reverse_type=ColumnUsageModel.USER_TABLE_RELATION_TYPE,
@@ -98,7 +102,7 @@ class ColumnUsageModel(GraphSerializable, TableSerializable):
         yield user_record
 
         table_usage_record = RDSTableUsage(
-            user_rk=self._get_user_key(self.user_email),
+            user_rk=self._get_user_key(),
             table_rk=self._get_table_key(),
             read_count=self.read_count
         )
@@ -110,8 +114,17 @@ class ColumnUsageModel(GraphSerializable, TableSerializable):
                                                      schema=self.schema,
                                                      tbl=self.table_name)
 
-    def _get_user_key(self, email: str) -> str:
-        return User.get_user_model_key(email=email)
+    def _get_user_key(self) -> str:
+        return User.get_user_model_key(email=self.user_email)
+
+    def _get_entity_key(self):
+        return self._get_table_key()
+
+    def _get_usage(self):
+        return self.read_count
+
+    def _get_entity_type(self):
+        return AtlasTableTypes.table
 
     def __repr__(self) -> str:
         return f'TableColumnUsage({self.database!r}, {self.cluster!r}, {self.schema!r}, ' \
