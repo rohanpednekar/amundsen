@@ -17,12 +17,11 @@
 #### Why not Atlas?
 1. Atlas is developed with data governance in mind and not with data discovery.
 2. Atlas seems to have a slow development cycle and it's community is not very responsive although some small improvements have been made.
-3. Amundsen databuilder integration is not yet supported which puts more strain on the end user to populate the required entities.
 
 ##  What are the prerequisites to use Apache Atlas as backend for Amundsen?
 To run Amundsen with Atlas, latest versions of following components should be used:
 1. [Apache Atlas](https://github.com/apache/atlas/) - built from `master` branch. Ref [`103e867cc126ddb84e64bf262791a01a55bee6e5`](https://github.com/apache/atlas/commit/103e867cc126ddb84e64bf262791a01a55bee6e5) (or higher).
-2. [amundsenatlastypes](https://pypi.org/project/amundsenatlastypes/) - library for installing Atlas entity definitions specific to Amundsen integration. Version `1.1.0` (or higher).
+2. [amundsenatlastypes](https://pypi.org/project/amundsenatlastypes/) - library for installing Atlas entity definitions specific to Amundsen integration. Version `1.3.0` (or higher).
 
 ## How to migrate from Amundsen 1.x -> 2.x?
 
