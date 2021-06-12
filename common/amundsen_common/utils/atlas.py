@@ -30,6 +30,7 @@ class AtlasCommonTypes:
     application = 'Application'
     tag = 'Tag'
     badge = 'Badge'
+    data_set = 'DataSet'
 
 
 class AtlasTableTypes:

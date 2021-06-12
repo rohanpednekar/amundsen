@@ -49,6 +49,11 @@ from databuilder.transformer.generic_transformer import (
     CALLBACK_FUNCTION, FIELD_NAME, GenericTransformer,
 )
 
+ATLAS_CREATE_BATCH_SIZE = 15
+ATLAS_SEARCH_CHUNK_SIZE = 15
+ATLAS_DETAILS_CHUNK_SIZE = 15
+ATLAS_PROCESS_POOL_SIZE = 3
+
 es_host = os.getenv('CREDENTIALS_ELASTICSEARCH_PROXY_HOST', 'localhost')
 atlas_host = os.getenv('CREDENTIALS_ATLAS_PROXY_HOST', 'localhost')
 
@@ -96,7 +101,7 @@ def run_csv_job(file_loc, job_name, model):
                                                                                        (atlas_user, atlas_password)),
         f'publisher.atlas_csv_publisher.{AtlasCSVPublisher.ENTITY_DIR_PATH}': node_files_folder,
         f'publisher.atlas_csv_publisher.{AtlasCSVPublisher.RELATIONSHIP_DIR_PATH}': relationship_files_folder,
-        f'publisher.atlas_csv_publisher.{AtlasCSVPublisher.ATLAS_ENTITY_CREATE_BATCH_SIZE}': 3,
+        f'publisher.atlas_csv_publisher.{AtlasCSVPublisher.ATLAS_ENTITY_CREATE_BATCH_SIZE}': ATLAS_CREATE_BATCH_SIZE,
     })
 
     DefaultJob(conf=job_config,
@@ -123,7 +128,7 @@ def run_table_badge_job(table_path, badge_path):
                                                                                        (atlas_user, atlas_password)),
         f'publisher.atlas_csv_publisher.{AtlasCSVPublisher.ENTITY_DIR_PATH}': node_files_folder,
         f'publisher.atlas_csv_publisher.{AtlasCSVPublisher.RELATIONSHIP_DIR_PATH}': relationship_files_folder,
-        f'publisher.atlas_csv_publisher.{AtlasCSVPublisher.ATLAS_ENTITY_CREATE_BATCH_SIZE}': 3,
+        f'publisher.atlas_csv_publisher.{AtlasCSVPublisher.ATLAS_ENTITY_CREATE_BATCH_SIZE}': ATLAS_CREATE_BATCH_SIZE,
     })
     job = DefaultJob(conf=job_config,
                      task=task,
@@ -150,7 +155,7 @@ def run_table_column_job(table_path, column_path):
                                                                                        (atlas_user, atlas_password)),
         f'publisher.atlas_csv_publisher.{AtlasCSVPublisher.ENTITY_DIR_PATH}': node_files_folder,
         f'publisher.atlas_csv_publisher.{AtlasCSVPublisher.RELATIONSHIP_DIR_PATH}': relationship_files_folder,
-        f'publisher.atlas_csv_publisher.{AtlasCSVPublisher.ATLAS_ENTITY_CREATE_BATCH_SIZE}': 3,
+        f'publisher.atlas_csv_publisher.{AtlasCSVPublisher.ATLAS_ENTITY_CREATE_BATCH_SIZE}': ATLAS_CREATE_BATCH_SIZE,
     })
     job = DefaultJob(conf=job_config,
                      task=task,
@@ -176,7 +181,7 @@ def run_table_lineage_job(table_lineage_path):
                                                                                        (atlas_user, atlas_password)),
         f'publisher.atlas_csv_publisher.{AtlasCSVPublisher.ENTITY_DIR_PATH}': node_files_folder,
         f'publisher.atlas_csv_publisher.{AtlasCSVPublisher.RELATIONSHIP_DIR_PATH}': relationship_files_folder,
-        f'publisher.atlas_csv_publisher.{AtlasCSVPublisher.ATLAS_ENTITY_CREATE_BATCH_SIZE}': 3,
+        f'publisher.atlas_csv_publisher.{AtlasCSVPublisher.ATLAS_ENTITY_CREATE_BATCH_SIZE}': ATLAS_CREATE_BATCH_SIZE,
     })
     job = DefaultJob(conf=job_config,
                      task=task,
@@ -202,43 +207,12 @@ def run_column_lineage_job(column_lineage_path):
                                                                                        (atlas_user, atlas_password)),
         f'publisher.atlas_csv_publisher.{AtlasCSVPublisher.ENTITY_DIR_PATH}': node_files_folder,
         f'publisher.atlas_csv_publisher.{AtlasCSVPublisher.RELATIONSHIP_DIR_PATH}': relationship_files_folder,
-        f'publisher.atlas_csv_publisher.{AtlasCSVPublisher.ATLAS_ENTITY_CREATE_BATCH_SIZE}': 3,
+        f'publisher.atlas_csv_publisher.{AtlasCSVPublisher.ATLAS_ENTITY_CREATE_BATCH_SIZE}': ATLAS_CREATE_BATCH_SIZE,
     })
     job = DefaultJob(conf=job_config,
                      task=task,
                      publisher=AtlasCSVPublisher())
     job.launch()
-
-
-#
-#
-# def create_last_updated_job():
-#     # loader saves data to these folders and publisher reads it from here
-#     tmp_folder = '/var/tmp/amundsen/last_updated_data'
-#     node_files_folder = f'{tmp_folder}/nodes'
-#     relationship_files_folder = f'{tmp_folder}/relationships'
-#
-#     task = DefaultTask(extractor=EsLastUpdatedExtractor(),
-#                        loader=FsNeo4jCSVLoader())
-#
-#     job_config = ConfigFactory.from_dict({
-#         'extractor.es_last_updated.model_class':
-#             'databuilder.models.es_last_updated.ESLastUpdated',
-#
-#         'loader.filesystem_csv_neo4j.node_dir_path': node_files_folder,
-#         'loader.filesystem_csv_neo4j.relationship_dir_path': relationship_files_folder,
-#         'publisher.neo4j.node_files_directory': node_files_folder,
-#         'publisher.neo4j.relation_files_directory': relationship_files_folder,
-#         'publisher.neo4j.neo4j_endpoint': neo4j_endpoint,
-#         'publisher.neo4j.neo4j_user': neo4j_user,
-#         'publisher.neo4j.neo4j_password': neo4j_password,
-#         'publisher.neo4j.neo4j_encrypted': False,
-#         'publisher.neo4j.job_publish_tag': 'unique_lastupdated_tag',  # should use unique tag here like {ds}
-#     })
-#
-#     return DefaultJob(conf=job_config,
-#                       task=task,
-#                       publisher=Neo4jCsvPublisher())
 
 
 def _str_to_list(str_val):
@@ -277,7 +251,7 @@ def create_dashboard_tables_job():
                                                                                        (atlas_user, atlas_password)),
         f'publisher.atlas_csv_publisher.{AtlasCSVPublisher.ENTITY_DIR_PATH}': node_files_folder,
         f'publisher.atlas_csv_publisher.{AtlasCSVPublisher.RELATIONSHIP_DIR_PATH}': relationship_files_folder,
-        f'publisher.atlas_csv_publisher.{AtlasCSVPublisher.ATLAS_ENTITY_CREATE_BATCH_SIZE}': 3,
+        f'publisher.atlas_csv_publisher.{AtlasCSVPublisher.ATLAS_ENTITY_CREATE_BATCH_SIZE}': ATLAS_CREATE_BATCH_SIZE,
     })
 
     return DefaultJob(conf=job_config,
@@ -286,8 +260,6 @@ def create_dashboard_tables_job():
 
 
 def create_es_publisher_sample_job(elasticsearch_index_alias='table_search_index',
-                                   elasticsearch_doc_type_key='table',
-                                   model_name='databuilder.models.table_elasticsearch_document.TableESDocument',
                                    entity_type='table',
                                    elasticsearch_mapping=None):
     """
@@ -311,7 +283,7 @@ def create_es_publisher_sample_job(elasticsearch_index_alias='table_search_index
     # elastic search client instance
     elasticsearch_client = es
     # unique name of new index in Elasticsearch
-    elasticsearch_new_index_key = f'{elasticsearch_doc_type_key}_{uuid.uuid4()}'
+    elasticsearch_new_index_key = f'{entity_type}_{uuid.uuid4()}'
 
     job_config = ConfigFactory.from_dict({
         'extractor.atlas_search_data.{}'.format(AtlasSearchDataExtractor.ATLAS_URL_CONFIG_KEY):
@@ -327,11 +299,11 @@ def create_es_publisher_sample_job(elasticsearch_index_alias='table_search_index
         'extractor.atlas_search_data.{}'.format(AtlasSearchDataExtractor.ATLAS_PASSWORD_CONFIG_KEY):
             atlas_password,
         'extractor.atlas_search_data.{}'.format(AtlasSearchDataExtractor.ATLAS_SEARCH_CHUNK_SIZE_KEY):
-            3,
+            ATLAS_SEARCH_CHUNK_SIZE,
         'extractor.atlas_search_data.{}'.format(AtlasSearchDataExtractor.ATLAS_DETAILS_CHUNK_SIZE_KEY):
-            3,
+            ATLAS_DETAILS_CHUNK_SIZE,
         'extractor.atlas_search_data.{}'.format(AtlasSearchDataExtractor.PROCESS_POOL_SIZE_KEY):
-            2,
+            ATLAS_PROCESS_POOL_SIZE,
         'extractor.atlas_search_data.{}'.format(AtlasSearchDataExtractor.ENTITY_TYPE_KEY):
             entity_type.title(),
         'loader.filesystem.elasticsearch.file_path': extracted_search_data_path,
@@ -340,7 +312,7 @@ def create_es_publisher_sample_job(elasticsearch_index_alias='table_search_index
         'publisher.elasticsearch.mode': 'r',
         'publisher.elasticsearch.client': elasticsearch_client,
         'publisher.elasticsearch.new_index': elasticsearch_new_index_key,
-        'publisher.elasticsearch.doc_type': elasticsearch_doc_type_key,
+        'publisher.elasticsearch.doc_type': '_doc',
         'publisher.elasticsearch.alias': elasticsearch_index_alias,
     })
 
@@ -361,7 +333,6 @@ if __name__ == "__main__":
 
     run_table_column_job('example/sample_data/sample_table.csv', 'example/sample_data/sample_col.csv')
     run_table_badge_job('example/sample_data/sample_table.csv', 'example/sample_data/sample_badges.csv')
-    sys.exit(1)
     run_table_lineage_job('example/sample_data/sample_table_lineage.csv')
     run_column_lineage_job('example/sample_data/sample_column_lineage.csv')
     # run_csv_job('example/sample_data/sample_table_column_stats.csv', 'test_table_column_stats',
@@ -402,14 +373,12 @@ if __name__ == "__main__":
     job_es_table = create_es_publisher_sample_job(
         elasticsearch_index_alias='table_search_index',
         elasticsearch_doc_type_key='table',
-        entity_type='table',
-        model_name='databuilder.models.table_elasticsearch_document.TableESDocument')
+        entity_type='table')
     job_es_table.launch()
 
     job_es_user = create_es_publisher_sample_job(
         elasticsearch_index_alias='user_search_index',
         elasticsearch_doc_type_key='user',
-        model_name='databuilder.models.user_elasticsearch_document.UserESDocument',
         entity_type='user',
         elasticsearch_mapping=USER_ELASTICSEARCH_INDEX_MAPPING)
     job_es_user.launch()
@@ -417,7 +386,6 @@ if __name__ == "__main__":
     job_es_dashboard = create_es_publisher_sample_job(
         elasticsearch_index_alias='dashboard_search_index',
         elasticsearch_doc_type_key='dashboard',
-        model_name='databuilder.models.dashboard_elasticsearch_document.DashboardESDocument',
         entity_type='dashboard',
         elasticsearch_mapping=DASHBOARD_ELASTICSEARCH_INDEX_MAPPING)
     job_es_dashboard.launch()

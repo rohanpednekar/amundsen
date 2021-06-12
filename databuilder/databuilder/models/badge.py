@@ -173,14 +173,9 @@ class BadgeMetadata(GraphSerializable, TableSerializable, AtlasSerializable):
         return entity
 
     def _create_atlas_classification_relation(self, badge: Badge) -> AtlasRelationship:
-        if self.start_label == 'Table':
-            entity_type = AtlasTableKey(self.start_key).entity_type
-        else:
-            entity_type = self.start_label
-
         table_relationship = AtlasRelationship(
             relationshipType=AtlasRelationshipTypes.badge,
-            entityType1=entity_type,
+            entityType1=AtlasCommonTypes.data_set,
             entityQualifiedName1=self.start_key,
             entityType2=AtlasRelationshipTypes.badge,
             entityQualifiedName2=badge.name,
