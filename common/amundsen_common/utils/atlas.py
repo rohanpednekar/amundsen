@@ -28,6 +28,7 @@ class AtlasCommonTypes:
     reader = 'Reader'
     cluster = 'Cluster'
     application = 'Application'
+    tag = 'Tag'
 
 
 class AtlasTableTypes:

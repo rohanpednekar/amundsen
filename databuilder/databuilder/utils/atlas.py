@@ -10,6 +10,7 @@ class AtlasRelationshipTypes:
     table_source = 'Source__Tables'
     lineage_upstream = 'dataset_process_inputs'
     lineage_downstream = 'process_dataset_outputs'
+    glossary = 'GlossaryTerm'
 
 
 class AtlasSerializedRelationshipFields:

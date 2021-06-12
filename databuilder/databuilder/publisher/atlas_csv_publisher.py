@@ -8,17 +8,21 @@ from typing import (
 )
 
 import pandas
-from amundsen_common.utils.atlas import AtlasCommonParams
 from apache_atlas.exceptions import AtlasServiceException
+from apache_atlas.model.glossary import (
+    AtlasGlossary, AtlasGlossaryHeader, AtlasGlossaryTerm,
+)
 from apache_atlas.model.instance import (
     AtlasEntitiesWithExtInfo, AtlasEntity, AtlasObjectId, AtlasRelatedObjectId,
 )
 from apache_atlas.model.relationship import AtlasRelationship
 from pyhocon import ConfigTree
 
+from amundsen_common.utils.atlas import AtlasCommonParams, AtlasCommonTypes
 from databuilder.publisher.base_publisher import Publisher
 from databuilder.utils.atlas import (
-    AtlasSerializedEntityFields, AtlasSerializedEntityOperation, AtlasSerializedRelationshipFields,
+    AtlasRelationshipTypes, AtlasSerializedEntityFields, AtlasSerializedEntityOperation,
+    AtlasSerializedRelationshipFields,
 )
 
 LOGGER = logging.getLogger(__name__)
@@ -63,9 +67,11 @@ class AtlasCSVPublisher(Publisher):
         """
         LOGGER.info('Creating entities using Entity files: %s', self._entity_files)
         for entity_file in self._entity_files:
-            entities_to_create, entities_to_update = self._create_entity_instances(entity_file=entity_file)
+            entities_to_create, entities_to_update, glossary_terms_to_create = self._create_entity_instances(
+                entity_file=entity_file)
             self._sync_entities_to_atlas(entities_to_create)
             self._update_entities(entities_to_update)
+            self._create_glossary_terms(glossary_terms_to_create)
 
         LOGGER.info('Creating relations using relation files: %s', self._relationship_files)
         for relation_file in self._relationship_files:
@@ -97,6 +103,10 @@ class AtlasCSVPublisher(Publisher):
 
         with open(relation_file, encoding='utf8') as relation_csv:
             for relation_record in pandas.read_csv(relation_csv, na_filter=False).to_dict(orient='records'):
+                if relation_record[AtlasSerializedRelationshipFields.relation_type] == AtlasRelationshipTypes.glossary:
+                    self._assign_glossary_term(relation_record)
+                    continue
+
                 relation = self._create_relation(relation_record)
                 try:
                     self._atlas_client.relationship.create_relationship(relation)
@@ -146,7 +156,7 @@ class AtlasCSVPublisher(Publisher):
 
         return relation
 
-    def _create_entity_instances(self, entity_file: str) -> Tuple[List[AtlasEntity], List[AtlasEntity]]:
+    def _create_entity_instances(self, entity_file: str) -> Tuple[List[AtlasEntity], List[AtlasEntity], List[Dict]]:
         """
         Go over the entities file and try creating instances
         :param entity_file:
@@ -154,14 +164,17 @@ class AtlasCSVPublisher(Publisher):
         """
         entities_to_create = []
         entities_to_update = []
+        glossary_terms_to_create = []
         with open(entity_file, encoding='utf8') as entity_csv:
             for entity_record in pandas.read_csv(entity_csv, na_filter=False).to_dict(orient='records'):
+                if entity_record[AtlasSerializedEntityFields.type_name] == AtlasCommonTypes.tag:
+                    glossary_terms_to_create.append(entity_record)
+                    continue
                 if entity_record[AtlasSerializedEntityFields.operation] == AtlasSerializedEntityOperation.CREATE:
                     entities_to_create.append(self._create_entity_from_dict(entity_record))
                 if entity_record[AtlasSerializedEntityFields.operation] == AtlasSerializedEntityOperation.UPDATE:
                     entities_to_update.append(self._create_entity_from_dict(entity_record))
-
-        return entities_to_create, entities_to_update
+        return entities_to_create, entities_to_update, glossary_terms_to_create
 
     def _extract_entity_relations_details(self, relation_details: str) -> Iterator[Tuple]:
         """
@@ -215,6 +228,58 @@ class AtlasCSVPublisher(Publisher):
                 self._atlas_client.entity.create_entities(chunk)
             except AtlasServiceException:
                 LOGGER.error(f'Error during entity syncing', exc_info=True)
+
+    def _create_glossary_terms(self, glossary_terms: List[Dict]) -> None:
+        for glossary_term_spec in glossary_terms:
+            glossary_name = glossary_term_spec.get('glossary')
+            term_name = glossary_term_spec.get('term')
+
+            glossary_def = AtlasGlossary({'name': glossary_name, 'shortDescription': ''})
+
+            try:
+                glossary = self._atlas_client.glossary.create_glossary(glossary_def)
+            except AtlasServiceException:
+                LOGGER.info(f'Glossary: {glossary_name} already exists.')
+                glossary = next(filter(lambda x: x.get('name') == glossary_name,
+                                       self._atlas_client.glossary.get_all_glossaries()))
+
+            glossary_guid = glossary['guid']
+            glossary_def = AtlasGlossaryHeader({'glossaryGuid': glossary_guid})
+            term_def = AtlasGlossaryTerm({'name': term_name, 'anchor': glossary_def})
+
+            try:
+                self._atlas_client.glossary.create_glossary_term(term_def)
+            except AtlasServiceException:
+                LOGGER.info(f'Glossary Term: {term_name} already exists.')
+
+    def _assign_glossary_term(self, relationship_spec: Dict) -> None:
+        _glossary_name, _term_name = relationship_spec[AtlasSerializedRelationshipFields.qualified_name_2].split(',')
+
+        glossary_name = _glossary_name.split('=')[1]
+        term_name = _term_name.split('=')[1]
+
+        entity_type = relationship_spec[AtlasSerializedRelationshipFields.entity_type_1]
+        entity_qn = relationship_spec[AtlasSerializedRelationshipFields.qualified_name_1]
+
+        glossary = next(filter(lambda g: g.get('name') == glossary_name,
+                               self._atlas_client.glossary.get_all_glossaries()))
+
+        glossary_guid = glossary[AtlasCommonParams.guid]
+
+        term = next(filter(lambda t: t.get('name') == term_name,
+                           self._atlas_client.glossary.get_glossary_terms(glossary_guid)))
+
+        entity = self._atlas_client.entity.get_entity_by_attribute(entity_type, uniq_attributes=[
+            (AtlasCommonParams.qualified_name, entity_qn)])
+
+        entity_guid = entity.entity.guid
+
+        e = AtlasRelatedObjectId({AtlasCommonParams.guid: entity_guid, AtlasCommonParams.type_name: entity_type})
+
+        try:
+            self._atlas_client.glossary.assign_term_to_entities(term[AtlasCommonParams.guid], [e])
+        except:
+            LOGGER.error('Error assigning terms to entities.', exc_info=True)
 
     def get_scope(self) -> str:
         return 'publisher.atlas_csv_publisher'

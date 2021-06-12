@@ -381,10 +381,8 @@ if __name__ == "__main__":
                 'databuilder.models.application.Application')
     run_csv_job('example/sample_data/sample_source.csv', 'test_source_metadata',
                 'databuilder.models.table_source.TableSource')
-    # run_csv_job('example/sample_data/sample_tags.csv', 'test_tag_metadata',
-    #             'databuilder.models.table_metadata.TagMetadata')
-    # run_csv_job('example/sample_data/sample_table_last_updated.csv', 'test_table_last_updated_metadata',
-    #             'databuilder.models.table_last_updated.TableLastUpdated')
+    run_csv_job('example/sample_data/sample_tags.csv', 'test_tag_metadata',
+                'databuilder.models.table_metadata.TagMetadata')
     # run_csv_job('example/sample_data/sample_schema_description.csv', 'test_schema_description',
     #             'databuilder.models.schema.schema.SchemaModel')
     run_csv_job('example/sample_data/sample_dashboard_base.csv', 'test_dashboard_base',
