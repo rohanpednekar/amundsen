@@ -15,10 +15,10 @@ const configCustom: AppConfigCustom = {
     notificationsEnabled: false,
   },
   indexDashboards: {
-    enabled: true,
+    enabled: false,
   },
   indexUsers: {
-    enabled: true,
+    enabled: false,
   },
   userIdLabel: 'email address',
   issueTracking: {
