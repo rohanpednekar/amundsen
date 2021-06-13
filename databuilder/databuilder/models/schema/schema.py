@@ -130,9 +130,11 @@ class SchemaModel(GraphSerializable, TableSerializable, AtlasSerializable):
 
         entity_attrs = get_entity_attrs(attrs_mapping)
 
+        # Since Schema cannot exist without Cluster (COMPOSITION relationship type), we assume Schema entity was created
+        # by different process and we only update schema description here using UPDATE operation.
         entity = AtlasEntity(
             typeName=AtlasTableTypes.schema,
-            operation=AtlasSerializedEntityOperation.CREATE,
+            operation=AtlasSerializedEntityOperation.UPDATE,
             attributes=entity_attrs,
             relationships=None
         )
