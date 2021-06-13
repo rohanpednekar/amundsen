@@ -142,7 +142,6 @@ class SchemaModel(GraphSerializable, TableSerializable, AtlasSerializable):
         return entity
 
     def _create_next_atlas_entity(self) -> Iterator[AtlasEntity]:
-        print(self._create_atlas_schema_entity())
         yield self._create_atlas_schema_entity()
 
     def create_next_atlas_entity(self) -> Union[AtlasEntity, None]:
