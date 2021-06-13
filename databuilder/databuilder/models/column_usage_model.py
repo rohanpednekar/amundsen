@@ -117,13 +117,13 @@ class ColumnUsageModel(GraphSerializable, TableSerializable, AtlasUsage):
     def _get_user_key(self) -> str:
         return User.get_user_model_key(email=self.user_email)
 
-    def _get_entity_key(self):
+    def _get_entity_key(self) -> str:
         return self._get_table_key()
 
-    def _get_usage(self):
-        return self.read_count
+    def _get_usage(self) -> float:
+        return float(self.read_count)
 
-    def _get_entity_type(self):
+    def _get_entity_type(self) -> str:
         return AtlasTableTypes.table
 
     def __repr__(self) -> str:

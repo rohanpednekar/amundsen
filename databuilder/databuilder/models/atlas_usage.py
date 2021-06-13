@@ -12,19 +12,19 @@ from databuilder.utils.atlas import AtlasRelationshipTypes, AtlasSerializedEntit
 
 class AtlasUsage(abc.ABC, AtlasSerializable):
     @abc.abstractmethod
-    def _get_entity_type(self):
+    def _get_entity_type(self) -> str:
         pass
 
     @abc.abstractmethod
-    def _get_user_key(self):
+    def _get_user_key(self) -> str:
         pass
 
     @abc.abstractmethod
-    def _get_entity_key(self):
+    def _get_entity_key(self) -> str:
         pass
 
     @abc.abstractmethod
-    def _get_usage(self):
+    def _get_usage(self) -> float:
         pass
 
     def _get_reader_key(self) -> str:
@@ -95,13 +95,13 @@ class AtlasUsage(abc.ABC, AtlasSerializable):
 
     def create_next_atlas_entity(self) -> Union[AtlasEntity, None]:
         try:
-            return next(self._atlas_entity_iterator)
+            return next(self._atlas_entity_iterator)  # type: ignore
         except StopIteration:
             return None
 
     def create_next_atlas_relation(self) -> Union[AtlasRelationship, None]:
         try:
-            return next(self._atlas_relation_iterator)
+            return next(self._atlas_relation_iterator)  # type: ignore
         except StopIteration:
             return None
 

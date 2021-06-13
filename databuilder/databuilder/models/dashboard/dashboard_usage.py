@@ -121,10 +121,10 @@ class DashboardUsage(GraphSerializable, TableSerializable, AtlasUsage):
         )
         yield dashboard_usage_record
 
-    def _get_user_key(self, *args, **kwargs):
+    def _get_user_key(self) -> str:
         return self._email
 
-    def _get_entity_key(self):
+    def _get_entity_key(self) -> str:
         return DashboardMetadata.DASHBOARD_KEY_FORMAT.format(
             product=self._product,
             cluster=self._cluster,
@@ -132,10 +132,10 @@ class DashboardUsage(GraphSerializable, TableSerializable, AtlasUsage):
             dashboard_name=self._dashboard_id
         )
 
-    def _get_usage(self):
+    def _get_usage(self) -> float:
         return self._view_count
 
-    def _get_entity_type(self):
+    def _get_entity_type(self) -> str:
         return AtlasDashboardTypes.metadata
 
     def __repr__(self) -> str:

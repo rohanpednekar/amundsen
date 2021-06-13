@@ -5,15 +5,23 @@ from typing import (
     Iterable, Iterator, Union,
 )
 
+from amundsen_common.utils.atlas import (
+    AtlasCommonParams, AtlasCommonTypes, AtlasTableTypes,
+)
 from amundsen_rds.models import RDSModel
 from amundsen_rds.models.table import TableUsage as RDSTableUsage
 
+from databuilder.models.atlas_entity import AtlasEntity
+from databuilder.models.atlas_relationship import AtlasRelationship
+from databuilder.models.atlas_serializable import AtlasSerializable
 from databuilder.models.graph_node import GraphNode
 from databuilder.models.graph_relationship import GraphRelationship
 from databuilder.models.graph_serializable import GraphSerializable
 from databuilder.models.table_metadata import TableMetadata
 from databuilder.models.table_serializable import TableSerializable
 from databuilder.models.user import User
+from databuilder.serializers.atlas_serializer import get_entity_attrs
+from databuilder.utils.atlas import AtlasRelationshipTypes, AtlasSerializedEntityOperation
 
 
 class ColumnReader(object):
@@ -44,7 +52,7 @@ class ColumnReader(object):
                f"user_email={self.user_email!r}, read_count={self.read_count!r})"
 
 
-class TableColumnUsage(GraphSerializable, TableSerializable):
+class TableColumnUsage(GraphSerializable, TableSerializable, AtlasSerializable):
     """
     A model represents user <--> column graph model
     Currently it only support to serialize to table level
@@ -67,6 +75,8 @@ class TableColumnUsage(GraphSerializable, TableSerializable):
         self._node_iterator = self._create_node_iterator()
         self._rel_iter = self._create_rel_iterator()
         self._record_iter = self._create_record_iterator()
+        self._atlas_entity_iterator = self._create_next_atlas_entity()
+        self._atlas_relation_iterator = self._create_atlas_relation_iterator()
 
     def create_next_node(self) -> Union[GraphNode, None]:
         try:
@@ -127,6 +137,98 @@ class TableColumnUsage(GraphSerializable, TableSerializable):
 
     def _get_user_key(self, email: str) -> str:
         return User.get_user_model_key(email=email)
+
+    def _get_entity_type(self) -> str:
+        return AtlasTableTypes.table
+
+    def _get_entity_key(self, user: ColumnReader) -> str:
+        return self._get_table_key(user)
+
+    def _get_reader_key(self, user: ColumnReader) -> str:
+        return f'{self._get_entity_key(user)}/_reader/{user.user_email}'
+
+    def _create_atlas_user_entity(self, user: ColumnReader) -> AtlasEntity:
+        attrs_mapping = [
+            (AtlasCommonParams.qualified_name, user.user_email),
+            ('email', user.user_email)
+        ]
+
+        entity_attrs = get_entity_attrs(attrs_mapping)
+
+        entity = AtlasEntity(
+            typeName=AtlasCommonTypes.user,
+            operation=AtlasSerializedEntityOperation.CREATE,
+            attributes=entity_attrs,
+            relationships=None
+        )
+
+        return entity
+
+    def _create_atlas_reader_entity(self, user: ColumnReader) -> AtlasEntity:
+        attrs_mapping = [
+            (AtlasCommonParams.qualified_name, self._get_reader_key(user)),
+            ('count', user.read_count),
+            ('entityUri', self._get_entity_key(user))
+        ]
+
+        entity_attrs = get_entity_attrs(attrs_mapping)
+
+        entity = AtlasEntity(
+            typeName=AtlasCommonTypes.reader,
+            operation=AtlasSerializedEntityOperation.CREATE,
+            attributes=entity_attrs,
+            relationships=None
+        )
+
+        return entity
+
+    def _create_atlas_reader_dataset_relation(self, user: ColumnReader) -> AtlasRelationship:
+        relationship = AtlasRelationship(
+            relationshipType=AtlasRelationshipTypes.referenceable_reader,
+            entityType1=self._get_entity_type(),
+            entityQualifiedName1=self._get_entity_key(user),
+            entityType2=AtlasCommonTypes.reader,
+            entityQualifiedName2=self._get_reader_key(user),
+            attributes=dict(count=user.read_count)
+        )
+
+        return relationship
+
+    def _create_atlas_user_reader_relation(self, user: ColumnReader) -> AtlasRelationship:
+        relationship = AtlasRelationship(
+            relationshipType=AtlasRelationshipTypes.reader_user,
+            entityType1=AtlasCommonTypes.reader,
+            entityQualifiedName1=self._get_reader_key(user),
+            entityType2=AtlasCommonTypes.user,
+            entityQualifiedName2=self._get_user_key(user.user_email),
+            attributes={}
+        )
+
+        return relationship
+
+    def _create_next_atlas_entity(self) -> Iterator[AtlasEntity]:
+        for col_reader in self.col_readers:
+            if col_reader.column == '*':
+                yield self._create_atlas_user_entity(col_reader)
+                yield self._create_atlas_reader_entity(col_reader)
+
+    def create_next_atlas_entity(self) -> Union[AtlasEntity, None]:
+        try:
+            return next(self._atlas_entity_iterator)
+        except StopIteration:
+            return None
+
+    def create_next_atlas_relation(self) -> Union[AtlasRelationship, None]:
+        try:
+            return next(self._atlas_relation_iterator)
+        except StopIteration:
+            return None
+
+    def _create_atlas_relation_iterator(self) -> Iterator[AtlasRelationship]:
+        for col_reader in self.col_readers:
+            if col_reader.column == '*':
+                yield self._create_atlas_reader_dataset_relation(col_reader)
+                yield self._create_atlas_user_reader_relation(col_reader)
 
     def __repr__(self) -> str:
         return f'TableColumnUsage(col_readers={self.col_readers!r})'
