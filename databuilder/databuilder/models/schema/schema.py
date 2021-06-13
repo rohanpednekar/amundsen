@@ -121,7 +121,7 @@ class SchemaModel(GraphSerializable, TableSerializable, AtlasSerializable):
         cluster_key = schema_key_match.group(1)
         return cluster_key
 
-    def _create_atlas_schema_entity(self):
+    def _create_atlas_schema_entity(self) -> AtlasEntity:
         attrs_mapping = [
             (AtlasCommonParams.qualified_name, self._schema_key),
             ('name', self._schema_key),
