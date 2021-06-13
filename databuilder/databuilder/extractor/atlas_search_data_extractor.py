@@ -100,8 +100,8 @@ class AtlasSearchDataExtractorHelpers:
     def get_usage(readers: Optional[List]) -> Tuple[int, int]:
         readers = readers or []
 
-        unique = 0
         score = 0
+        unique = 0
 
         for reader in readers:
             reader_status = reader.get('status')
@@ -111,8 +111,10 @@ class AtlasSearchDataExtractorHelpers:
                                                          dict()).get('relationshipStatus', '')
 
             if reader_status == 'ACTIVE' and entity_status == 'ACTIVE' and relationship_status == 'ACTIVE':
-                unique += 1
                 score += reader.get('attributes', dict()).get('count', 0)
+
+                if score > 0:
+                    unique += 1
 
         return score, unique
 
