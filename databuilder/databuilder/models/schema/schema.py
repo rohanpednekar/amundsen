@@ -125,7 +125,7 @@ class SchemaModel(GraphSerializable, TableSerializable, AtlasSerializable):
         attrs_mapping = [
             (AtlasCommonParams.qualified_name, self._schema_key),
             ('name', self._schema_key),
-            ('description', self._description.text)
+            ('description', self._description.text if self._description else '')
         ]
 
         entity_attrs = get_entity_attrs(attrs_mapping)
