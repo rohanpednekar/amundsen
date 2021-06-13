@@ -353,8 +353,8 @@ if __name__ == "__main__":
                 'databuilder.models.table_source.TableSource')
     run_csv_job('example/sample_data/sample_tags.csv', 'test_tag_metadata',
                 'databuilder.models.table_metadata.TagMetadata')
-    # run_csv_job('example/sample_data/sample_schema_description.csv', 'test_schema_description',
-    #             'databuilder.models.schema.schema.SchemaModel')
+    run_csv_job('example/sample_data/sample_schema_description.csv', 'test_schema_description',
+                'databuilder.models.schema.schema.SchemaModel')
     run_csv_job('example/sample_data/sample_dashboard_base.csv', 'test_dashboard_base',
                 'databuilder.models.dashboard.dashboard_metadata.DashboardMetadata')
     run_csv_job('example/sample_data/sample_dashboard_usage.csv', 'test_dashboard_usage',
