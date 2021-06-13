@@ -96,6 +96,24 @@ class AtlasSearchDataExtractorHelpers:
 
         return parameters.get('sourceDescription', '')
 
+    @staticmethod
+    def get_usage(readers: Optional[List]) -> int:
+        readers = readers or []
+
+        score = 0
+
+        for reader in readers:
+            reader_status = reader.get('status')
+            entity_status = reader.get('relationshipAttributes', dict()).get('entity', dict()).get('entityStatus', '')
+            relationship_status = reader.get('relationshipAttributes',
+                                             dict()).get('entity',
+                                                         dict()).get('relationshipStatus', '')
+
+            if reader_status == 'ACTIVE' and entity_status == 'ACTIVE' and relationship_status == 'ACTIVE':
+                score += reader.get('attributes', dict()).get('count', 0)
+
+        return score
+
 
 class AtlasSearchDataExtractor(Extractor):
     ATLAS_URL_CONFIG_KEY = 'atlas_url'
@@ -136,7 +154,8 @@ class AtlasSearchDataExtractor(Extractor):
             ('key', 'attributes.qualifiedName', None, None),
             ('description', 'attributes.description', None, None),
             ('last_updated_timestamp', 'updateTime', lambda x: int(x) / 1000, 0),
-            ('total_usage', 'attributes.popularityScore', lambda x: int(x), 0),
+            ('total_usage', 'relationshipAttributes.readers',
+             lambda x: AtlasSearchDataExtractorHelpers.get_usage(x), 0),
             ('unique_usage', 'attributes.uniqueUsage', lambda x: int(x), 1),
             ('column_names', 'relationshipAttributes.columns',
              lambda x: AtlasSearchDataExtractorHelpers.get_entity_names(x), []),
@@ -157,7 +176,8 @@ class AtlasSearchDataExtractor(Extractor):
             ('group_name', 'relationshipAttributes.group.attributes.name', None, None),
             ('name', 'attributes.name', None, None),
             ('description', 'attributes.description', None, None),
-            ('total_usage', 'attributes.popularityScore', lambda x: int(x), 0),
+            ('total_usage', 'relationshipAttributes.readers',
+             lambda x: AtlasSearchDataExtractorHelpers.get_usage(x), 0),
             ('product', 'attributes.product', None, None),
             ('cluster', 'attributes.cluster', None, None),
             ('group_description', 'relationshipAttributes.group.attributes.description', None, None),
@@ -200,7 +220,7 @@ class AtlasSearchDataExtractor(Extractor):
     }
 
     REQUIRED_RELATIONSHIPS_BY_TYPE = {
-        'Table': ['columns'],
+        'Table': ['columns', 'readers'],
         'Dashboard': ['group', 'charts', 'executions', 'queries'],
         'User': []
     }
@@ -245,7 +265,7 @@ class AtlasSearchDataExtractor(Extractor):
 
     @property
     def relationships(self) -> Optional[List[str]]:
-        return AtlasSearchDataExtractor.REQUIRED_RELATIONSHIPS_BY_TYPE.get(self.entity_type)
+        return AtlasSearchDataExtractor.REQUIRED_RELATIONSHIPS_BY_TYPE.get(self.entity_type)  # type: ignore
 
     def extract(self) -> Any:
         if not self._extract_iter:
