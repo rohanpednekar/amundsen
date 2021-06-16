@@ -7,7 +7,9 @@ from typing import (
     Any, Iterator, List, Optional, Union,
 )
 
-from amundsen_common.utils.atlas import AtlasDashboardTypes, AtlasTableKey
+from amundsen_common.utils.atlas import (
+    AtlasDashboardTypes, AtlasTableKey, AtlasTableTypes,
+)
 from amundsen_rds.models import RDSModel
 from amundsen_rds.models.dashboard import DashboardTable as RDSDashboardTable
 
@@ -130,7 +132,7 @@ class DashboardTable(GraphSerializable, TableSerializable, AtlasSerializable):
 
             table_relationship = AtlasRelationship(
                 relationshipType=AtlasRelationshipTypes.table_dashboard,
-                entityType1=key.entity_type,
+                entityType1=AtlasTableTypes.table,
                 entityQualifiedName1=key.qualified_name,
                 entityType2=AtlasDashboardTypes.metadata,
                 entityQualifiedName2=DashboardMetadata.DASHBOARD_KEY_FORMAT.format(
