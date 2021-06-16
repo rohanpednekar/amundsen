@@ -157,7 +157,7 @@ class TestDashboardTable(unittest.TestCase):
             },
             {
                 "relationshipType": "Table__Dashboard",
-                "entityType1": "hive_table",
+                "entityType1": "Table",
                 "entityQualifiedName1": "schema.table2@gold",
                 "entityType2": "Dashboard",
                 "entityQualifiedName2": "product_id_dashboard://cluster_id.dashboard_group_id/dashboard_id",
