@@ -199,7 +199,7 @@ class AtlasKey(abc.ABC):
     @property
     def entity_type(self) -> str:
         if self.is_qualified_name:
-            return self._database
+            return self._database or ''
         else:
             return self.get_details()['database'] \
                 if self.get_details()['database'] in self.native_atlas_entity_types else 'Table'
